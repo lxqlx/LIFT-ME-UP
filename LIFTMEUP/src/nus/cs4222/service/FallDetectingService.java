@@ -31,13 +31,14 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Vibrator;
-import android.telephony.SmsManager;
 import android.util.Log;
 import android.view.WindowManager;
 import android.widget.Toast;
 
 public class FallDetectingService extends Service implements
 		SensorEventListener {
+	private String Name;
+	private String PhoneNum;
 	/** Location coordinates*/
 	private double currentLocationLat=0;
 	private double currentLocationLng=0;
@@ -221,7 +222,8 @@ public class FallDetectingService extends Service implements
 	@Override
 	public int onStartCommand(Intent intent, int flag, int startId){
 		Toast.makeText(this, "Fall Detecting Started", Toast.LENGTH_LONG).show();
-		
+		Name = intent.getStringExtra("Name");
+		PhoneNum = intent.getStringExtra("ContactNum");
 		//Initialize
 		initializeWindow();
 		//location
@@ -484,18 +486,18 @@ public class FallDetectingService extends Service implements
                     DtnMessage message = new DtnMessage();
                     // Data part
                     message.addData()                  // Create data chunk
-                        .writeString("Yaguang")
+                        .writeString(Name)
                         .writeString("fall")
                         .writeDouble(currentLocationLat)
                         .writeDouble(currentLocationLng);
 
                     // Broadcast the message using the fwd layer interface
-                    fwdLayer.sendMessage ( descriptor , message , "server" , null );
+                    fwdLayer.sendMessage ( descriptor , message , "everyone" , null );
 
                     // Tell the user that the message has been sent
-                    createToast ( "Chat message broadcast!" + currentLocationLat + currentLocationLng);
+                    createToast ( "Chat message broadcast!" + currentLocationLat + " " + currentLocationLng);
                     //SmsManager smsManager = SmsManager.getDefault();
-    				//smsManager.sendTextMessage("96775203", null, "I FALL at "+currentLocationLat+" "+currentLocationLng, null, null);
+    				//smsManager.sendTextMessage(PhoneNum, null, "I FALL at "+currentLocationLat+" "+currentLocationLng, null, null);
                 }
                 catch ( Exception e ) {
                     // Log the exception

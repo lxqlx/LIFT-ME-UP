@@ -5,7 +5,7 @@
     android:versionName="1.0" >
 
     <uses-sdk
-        android:minSdkVersion="11"
+        android:minSdkVersion="15"
         android:targetSdkVersion="19" />
 
 	<uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
@@ -15,12 +15,19 @@
     <uses-permission android:name="com.google.android.providers.gsf.permission.READ_GSERVICES" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
-
+	<uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="com.google.android.c2dm.permission.RECEIVE" />
+    
+    <permission android:name="com.example.falldetectorserver.permission.C2D_MESSAGE"
+        android:protectionLevel="signature" />
+    <uses-permission android:name="com.example.falldetectorserver.permission.C2D_MESSAGE" />
+    
     <application
         android:allowBackup="true"
         android:icon="@drawable/ic_launcher"
         android:label="@string/app_name"
         android:theme="@style/AppTheme" >
+        
         <activity
             android:name="com.example.falldetectorserver.MainActivity"
             android:label="@string/app_name" >
@@ -30,13 +37,27 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        
         <activity
             android:name="com.example.falldetectorserver.GoogleMap"
             android:label="@string/title_activity_google_map" >
         </activity>
+        
+        <receiver
+            android:name=".GcmBroadcastReceiver"
+            android:permission="com.google.android.c2dm.permission.SEND" >
+            <intent-filter>
+                <action android:name="com.google.android.c2dm.intent.RECEIVE" />
+                <category android:name="com.example.falldetectorserver" />
+            </intent-filter>
+        </receiver>
+        
+        <service android:name=".GcmIntentService" />
+        
         <meta-data
             android:name="com.google.android.maps.v2.API_KEY"
             android:value="AIzaSyCrXMGQRTVSJbxegIj-Z1-mPQ241OpQaL8"/>
+        
         <meta-data
 			android:name="com.google.android.gms.version"
 			android:value="@integer/google_play_services_version" />

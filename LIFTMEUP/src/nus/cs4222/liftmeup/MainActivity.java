@@ -5,10 +5,13 @@ import java.security.Provider.Service;
 import nus.cs4222.service.FallDetectingService;
 import android.os.Bundle;
 import android.app.Activity;
+import android.content.Context;
 import android.content.Intent;
 import android.view.Menu;
 import android.view.View;
+import android.view.inputmethod.InputMethodManager;
 import android.widget.EditText;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 
 public class MainActivity extends Activity {
@@ -40,15 +43,20 @@ public class MainActivity extends Activity {
 			intent.putExtra("ContactNum", editText_Contact.getText().toString());
 			editText_Contact.setFocusable(false);
 			editText_Name.setFocusable(false);
+			
+			InputMethodManager mgr = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+		    mgr.hideSoftInputFromWindow(editText_Contact.getWindowToken(), 0);
+		    mgr.hideSoftInputFromWindow(editText_Name.getWindowToken(), 0);
+			
 			startService(intent);
 		}else{
-			textView_Status.setText("Must Enter Contact Number!");
+			textView_Status.setText("Must Enter Name and Contact Number!");
 		}
 	}
 	public void stopSensing(View view){
 		textView_Status.setText("Stoped");
-		editText_Contact.setFocusable(true);
-		editText_Name.setFocusable(true);
+		editText_Contact.setFocusableInTouchMode(true);
+		editText_Name.setFocusableInTouchMode(true);
 		Intent intent = new Intent(getBaseContext(), FallDetectingService.class);
         stopService(intent);
 	}

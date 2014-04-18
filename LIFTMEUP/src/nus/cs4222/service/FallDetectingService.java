@@ -126,7 +126,7 @@ public class FallDetectingService extends Service implements
 
         // The PendingIntent to launch our activity if the user selects this notification
         PendingIntent contentIntent = PendingIntent.getActivity(this, 0,
-                new Intent(this, MainActivity.class), 0);
+                new Intent(this, MainActivity.class), Intent.FLAG_ACTIVITY_SINGLE_TOP );
 
         // Set the info for the views that show in the notification panel.
         notification.setLatestEventInfo(this, getText(R.string.app_name),

@@ -5,5 +5,10 @@
 	<classpathentry kind="con" path="com.android.ide.eclipse.adt.ANDROID_FRAMEWORK"/>
 	<classpathentry exported="true" kind="con" path="com.android.ide.eclipse.adt.LIBRARIES"/>
 	<classpathentry exported="true" kind="con" path="com.android.ide.eclipse.adt.DEPENDENCIES"/>
+	<classpathentry kind="lib" path="C:/Users/lxqfy/workspace/LIFTMEUP/libs/DtnMiddlewareApi.jar"/>
+	<classpathentry kind="lib" path="C:/Users/lxqfy/workspace/LIFTMEUP/libs/DtnMiddlewareUtil.jar"/>
+	<classpathentry kind="lib" path="C:/Users/lxqfy/workspace/LIFTMEUP/libs/ForwardingLayerApi.jar"/>
+	<classpathentry kind="lib" path="C:/Users/lxqfy/workspace/LIFTMEUP/libs/osgi.core.jar"/>
+	<classpathentry kind="lib" path="C:/Users/lxqfy/workspace/LIFTMEUP/libs/osgi-config-1.5.jar"/>
 	<classpathentry kind="output" path="bin/classes"/>
 </classpath>

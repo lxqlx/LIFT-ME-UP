@@ -9,6 +9,17 @@
     android:orientation="vertical"
     tools:context=".MainActivity" >
 
+    <EditText
+        android:id="@+id/editText_Contact"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:ems="10"
+        android:inputType="numberDecimal"
+        android:hint="Enter Contact Number" >
+
+        <requestFocus />
+    </EditText>
+
     <Button
         android:id="@+id/button1"
         android:layout_width="match_parent"
@@ -16,10 +27,18 @@
         android:text="Start" 
         android:onClick="startSensing"/>
 
-    <TextView
-        android:id="@+id/textView1"
+    
+    <Button
+        android:id="@+id/button2"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:layout_weight="0.78"/>
+        android:layout_height="wrap_content"
+        android:text="Stop" 
+        android:onClick="stopSensing"/>
+
+    <TextView
+        android:id="@+id/textView_Status"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"/>
+    
 
 </LinearLayout>

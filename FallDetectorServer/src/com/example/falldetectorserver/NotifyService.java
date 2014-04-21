@@ -12,8 +12,6 @@ public class NotifyService extends IntentService {
 		super("NotifyService");
 	}
 
-
-	@SuppressWarnings("deprecation")
 	private void noti(Context myContext, String data) {
 		NotificationManager mNotificationManager =
     	        (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
@@ -43,7 +41,7 @@ public class NotifyService extends IntentService {
     	    // updated.
     	    mNotificationManager.notify(
     	            notifyID,
-    	            mNotifyBuilder.getNotification ());
+    	            mNotifyBuilder.build());
 	}
 
 	@Override

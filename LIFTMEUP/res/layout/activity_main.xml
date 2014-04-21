@@ -1,52 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:orientation="vertical"
     android:paddingBottom="@dimen/activity_vertical_margin"
     android:paddingLeft="@dimen/activity_horizontal_margin"
     android:paddingRight="@dimen/activity_horizontal_margin"
     android:paddingTop="@dimen/activity_vertical_margin"
-    android:orientation="vertical"
     tools:context=".MainActivity" >
 
-    <EditText
-        android:id="@+id/editText_Name"
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" >
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="My Name" />
+
+        <EditText
+            android:id="@+id/editText_Name"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:ems="10"
+            android:hint="Owner&apos;s Name"
+            android:inputType="textPersonName" />
+
+    </LinearLayout>
+
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:ems="10"
-        android:hint="Enter Name"
-        android:inputType="textPersonName" />
+        android:orientation="horizontal" >
 
-    <EditText
-        android:id="@+id/editText_Contact"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:ems="10"
-        android:inputType="numberDecimal"
-        android:hint="Enter Contact Number" >
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Contact" />
 
-        <requestFocus />
-    </EditText>
+        <EditText
+            android:id="@+id/editText_Contact"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:ems="10"
+            android:hint="Caregiver&apos;s Contact Number"
+            android:inputType="numberDecimal" />
+
+    </LinearLayout>
 
     <Button
-        android:id="@+id/button1"
+        android:id="@+id/button_FallDetecting"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Start" 
-        android:onClick="startSensing"/>
+        android:onClick="onFallDetectingClick"
+        android:text="Start" />
 
-    
-    <Button
-        android:id="@+id/button2"
+    <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Stop" 
-        android:onClick="stopSensing"/>
+        android:layout_height="wrap_content" >
 
-    <TextView
-        android:id="@+id/textView_Status"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"/>
-    
+        <TextView
+            android:id="@+id/textView_StatusLabel"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Fall Detecting Status: " />
+
+        <TextView
+            android:id="@+id/textView_Status"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:text="Stopped" />
+    </LinearLayout>
 
 </LinearLayout>

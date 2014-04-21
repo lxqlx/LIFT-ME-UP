@@ -1,17 +1,9 @@
 package nus.cs4222.service;
 
+import nus.cs4222.liftmeup.LiftMeUpConstants;
 import nus.cs4222.liftmeup.MainActivity;
 import nus.cs4222.liftmeup.R;
-import nus.dtn.api.fwdlayer.ForwardingLayerInterface;
-import nus.dtn.api.fwdlayer.ForwardingLayerProxy;
-import nus.dtn.middleware.api.DtnMiddlewareInterface;
-import nus.dtn.middleware.api.DtnMiddlewareProxy;
-import nus.dtn.middleware.api.MiddlewareEvent;
-import nus.dtn.middleware.api.MiddlewareListener;
-import nus.dtn.util.Descriptor;
-import nus.dtn.util.DtnMessage;
 import android.app.AlertDialog;
-import android.app.Notification;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
@@ -19,6 +11,8 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.DialogInterface.OnClickListener;
 import android.content.Intent;
+import android.content.SharedPreferences;
+import android.content.SharedPreferences.Editor;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
@@ -31,28 +25,26 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Vibrator;
+import android.support.v4.app.NotificationCompat;
 import android.util.Log;
 import android.view.WindowManager;
 import android.widget.Toast;
 
 public class FallDetectingService extends Service implements
 		SensorEventListener {
-	private String Name;
-	private String PhoneNum;
-	/** Location coordinates*/
-	private double currentLocationLat=0;
-	private double currentLocationLng=0;
-	/** Dialog pop up window*/
+
+	/** Dialog pop up window */
 	private AlertDialog dialog;
-	/** Notification*/
+	/** Notification */
 	private NotificationManager mNM;
+	
 	/** Sensor manager. */
 	private SensorManager sensorManager;
 	/** Gravity sensor. */
 	private Sensor gravitySensor;
 	private Sensor accelerationSensor;
-	
-	/**Vibrator*/
+
+	/** Vibrator */
 	private Vibrator vibrator;
 
 	/** Handler to the main thread. */
@@ -64,9 +56,10 @@ public class FallDetectingService extends Service implements
 	private float[] gravityValues;
 
 	/** DDMS Log Tag. */
-	private static final String TAG = "FallDetection", ANGLE_TAG = "AngleChanged",
-			ACCE_TAG = "Acce", GRAV_TAG = "Grav";
-	private static final int IDLE = 0, PRIMARY_FALL = 1, LONG_LY = 2, CONFIRM_FALL = 3, RECOVER = 4;
+	private static final String TAG = "FallDetection",
+			ANGLE_TAG = "AngleChanged", ACCE_TAG = "Acce", GRAV_TAG = "Grav";
+	private static final int IDLE = 0, PRIMARY_FALL = 1, LONG_LY = 2,
+			CONFIRM_FALL = 3, RECOVER = 4;
 	private static final int NOTIFICATION = R.string.title_activity_detecting_fall;
 
 	/** Window to record acceleration data */
@@ -86,65 +79,42 @@ public class FallDetectingService extends Service implements
 	private boolean recoverFromPrimary;
 	private boolean longLyFall;
 	private boolean confirmFall;
+
+	private DtnHelper mDtnHelper;
+	private GcmHelper mGcmHelper;
 	
-	
-    /** DTN Middle ware API. */
-    private DtnMiddlewareInterface middleware;
-    /** Fwd layer API. */
-    private ForwardingLayerInterface fwdLayer;
-    /** Sender's descriptor. */
-    private Descriptor descriptor;
-    
-      
-    @SuppressWarnings("deprecation")
 	@Override
-    public void onCreate() {
-    	handler = new Handler();
-    	android.app.AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        builder.setTitle("Fall Detected!!!");
-        builder.setMessage("Are You OK?");
-        builder.setNegativeButton("Cancle", new OnClickListener() {
-            @Override
-            public void onClick(DialogInterface dialog, int which) {
-            	initializeWindow();
-            }
-        });
-        dialog = builder.create();
-        dialog.getWindow().setType((WindowManager.LayoutParams.TYPE_SYSTEM_ALERT));
-    	
-    	
-    	
-        mNM = (NotificationManager)getSystemService(NOTIFICATION_SERVICE);
-        
+	public void onCreate() {
+		handler = new Handler();
+		android.app.AlertDialog.Builder builder = new AlertDialog.Builder(this);
+		builder.setTitle("Fall Detected!!!");
+		builder.setMessage("Are You OK?");
+		builder.setNegativeButton("Cancle", new OnClickListener() {
+			@Override
+			public void onClick(DialogInterface dialog, int which) {
+				initDetectWindow();
+			}
+		});
+		dialog = builder.create();
+		dialog.getWindow().setType(
+				(WindowManager.LayoutParams.TYPE_SYSTEM_ALERT));
 
-     // In this sample, we'll use the same text for the ticker and the expanded notification
-        CharSequence text = getText(R.string.detecting);
-
-        // Set the icon, scrolling text and timestamp
-        Notification notification = new Notification(R.drawable.ic_launcher, text,
-                System.currentTimeMillis());
-
-        // The PendingIntent to launch our activity if the user selects this notification
-        PendingIntent contentIntent = PendingIntent.getActivity(this, 0,
-                new Intent(this, MainActivity.class), Intent.FLAG_ACTIVITY_SINGLE_TOP );
-
-        // Set the info for the views that show in the notification panel.
-        notification.setLatestEventInfo(this, getText(R.string.app_name),
-                       text, contentIntent);
-        notification.flags = notification.FLAG_NO_CLEAR;
-
-        // Send the notification.
-        mNM.notify(NOTIFICATION, notification);
-    }
-
-	
-	
-	
+		PendingIntent contentIntent = PendingIntent.getActivity(this, 0,
+				new Intent(this, MainActivity.class),
+				PendingIntent.FLAG_UPDATE_CURRENT);
+		
+		NotificationCompat.Builder notificationBuilder = new NotificationCompat.Builder(this);
+		notificationBuilder.setSmallIcon(R.drawable.ic_launcher)
+			.setContentTitle(getText(R.string.detecting))
+			.setContentText(getText(R.string.title_activity_detecting_fall))
+			.setContentIntent(contentIntent);
+		
+		mNM = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
+		mNM.notify(NOTIFICATION, notificationBuilder.build());
+	}
 
 	@Override
 	public void onAccuracyChanged(Sensor arg0, int arg1) {
-		// TODO Auto-generated method stub
-
 	}
 
 	@Override
@@ -158,101 +128,83 @@ public class FallDetectingService extends Service implements
 		}
 		if (event.sensor.getType() == Sensor.TYPE_ACCELEROMETER) {
 			float[] va = event.values;
-			AccelerationMag = (float) Math.sqrt(va[0] * va[0] + va[1] * va[1] + va[2] * va[2]);
+			AccelerationMag = (float) Math.sqrt(va[0] * va[0] + va[1] * va[1]
+					+ va[2] * va[2]);
 			addAcceData(AccelerationMag);
-			Log.d("Acce",AccelerationMag+" ");
+			Log.d("Acce", AccelerationMag + " ");
 		}
 
 		// important to trigger fall flag
 		checkFall();
-		
+
 		responseFall();
-		
 	}
 
 	private void responseFall() {
 		if (recoverFromPrimary && curState != IDLE) {
 			dialog.dismiss();
 			curState = IDLE;
-			initializeWindow();
+			initDetectWindow();
 			Toast.makeText(this, "Recoverd", Toast.LENGTH_LONG).show();
 		}
 		if (primaryFall && curState == IDLE) {
 			curState = PRIMARY_FALL;
-			Toast.makeText(this, "Primary Fall Detected", Toast.LENGTH_LONG).show();
+			Toast.makeText(this, "Primary Fall Detected", Toast.LENGTH_LONG)
+					.show();
 		}
 		if (longLyFall && curState == PRIMARY_FALL) {
 			curState = LONG_LY;
-			Toast.makeText(this, "Long Lie State Detected", Toast.LENGTH_LONG).show();
-			//start.Timer()
-			new Thread(){
-	            public void run() {
-	               // SystemClock.sleep(4000);
-	                handler.post(new Runnable() {
-	                    @Override
-	                    public void run() {
-	                        dialog.show();
-	                    }
-	                });
-	                };
-	        }.start();
-		} 
+			Toast.makeText(this, "Long Lie State Detected", Toast.LENGTH_LONG)
+					.show();
+			// start.Timer()
+			new Thread() {
+				public void run() {
+					// SystemClock.sleep(4000);
+					handler.post(new Runnable() {
+						@Override
+						public void run() {
+							dialog.show();
+						}
+					});
+				};
+			}.start();
+		}
 		if (confirmFall && curState == LONG_LY) {
 			curState = CONFIRM_FALL;
-			Toast.makeText(this, "Sending Message...", Toast.LENGTH_LONG).show();
-			sendMessage();//send message
+			Toast.makeText(this, "Sending Message...", Toast.LENGTH_LONG)
+					.show();
+			sendMessage();// send message
 			dialog.dismiss();
-		} 
-		if(longLyFall && datacout%50 ==0){
+		}
+		if (longLyFall && datacout % 50 == 0) {
 			vibrator.vibrate(500);
 		}
-		
+
 	}
 
-
-
-
+	private void sendMessage() {
+		mDtnHelper.sendMessage();
+		mGcmHelper.sendMessage();
+	}
 
 	@Override
 	public IBinder onBind(Intent arg0) {
-		// TODO Auto-generated method stub
 		return null;
 	}
-	
+
 	@Override
-	public int onStartCommand(Intent intent, int flag, int startId){
-		Toast.makeText(this, "Fall Detecting Started", Toast.LENGTH_LONG).show();
-		Name = intent.getStringExtra("Name");
-		PhoneNum = intent.getStringExtra("ContactNum");
-		//Initialize
-		initializeWindow();
-		//location
-		LocationManager locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
-		LocationListener locationListener = new LocationListener() {
-		    public void onLocationChanged(Location location) {
-		    	currentLocationLat = location.getLatitude();
-				currentLocationLng = location.getLongitude();
-		    }
-
-		    public void onStatusChanged(String provider, int status, Bundle extras) {}
-
-		    public void onProviderEnabled(String provider) {}
-
-		    public void onProviderDisabled(String provider) {}
-		};
-		Criteria criteria = new Criteria();
-		String provider = locationManager.getBestProvider(criteria, true);
-		Location location = locationManager.getLastKnownLocation(provider);
-		if(location!=null)
-		{	currentLocationLat = location.getLatitude();
-			currentLocationLng = location.getLongitude();
-		}
-		locationManager.requestLocationUpdates(provider, 1000, 0, locationListener);
-		//vibration
+	public int onStartCommand(Intent intent, int flag, int startId) {
+		initDetectWindow();
+		initSensors();
+		initLocationService();
+		mDtnHelper = new DtnHelper(getApplicationContext());
+		mGcmHelper = new GcmHelper(getApplicationContext());
 		vibrator = (Vibrator) this.getSystemService(Context.VIBRATOR_SERVICE);
-		//start middle ware
-		startMiddleWare();
-		
+
+		return START_STICKY;
+	}
+
+	private void initSensors() {
 		gravityValues = new float[] { 0.0F, 0.0F, 0.0F };
 
 		// Get an instance of the SensorManager
@@ -262,7 +214,8 @@ public class FallDetectingService extends Service implements
 		accelerationSensor = sensorManager
 				.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
 		if (gravitySensor == null) {
-			Toast.makeText(this, "Opps, No GravitySensor Detected!", Toast.LENGTH_LONG).show();
+			Toast.makeText(this, "Opps, No GravitySensor Detected!",
+					Toast.LENGTH_LONG).show();
 		}
 		sensorManager.registerListener(this, // Listener
 				gravitySensor, // Sensor to measure
@@ -271,21 +224,54 @@ public class FallDetectingService extends Service implements
 		sensorManager.registerListener(this, // Listener
 				accelerationSensor, // Sensor to measure
 				20000); // Measurement interval (microsec)
-
-
-		return START_STICKY;
 	}
-	
+
+	private void initLocationService() {
+		LocationManager locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
+		LocationListener locationListener = new LocationListener() {
+			public void onLocationChanged(Location location) {
+				SharedPreferences pref = getSharedPreferences(LiftMeUpConstants.PREF_NAME, MODE_PRIVATE);
+				Editor editor = pref.edit();
+				editor.putFloat(LiftMeUpConstants.PREF_LAT_KEY, (float) location.getLatitude());
+				editor.putFloat(LiftMeUpConstants.PREF_LNG_KEY, (float) location.getLongitude());
+				editor.apply();
+			}
+
+			public void onStatusChanged(String provider, int status,
+					Bundle extras) {
+			}
+
+			public void onProviderEnabled(String provider) {
+			}
+
+			public void onProviderDisabled(String provider) {
+			}
+		};
+		
+		Criteria criteria = new Criteria();
+		String provider = locationManager.getBestProvider(criteria, true);
+		Location location = locationManager.getLastKnownLocation(provider);
+		if (location != null) {
+			SharedPreferences pref = getSharedPreferences(LiftMeUpConstants.PREF_NAME, MODE_PRIVATE);
+			Editor editor = pref.edit();
+			editor.putFloat(LiftMeUpConstants.PREF_LAT_KEY, (float) location.getLatitude());
+			editor.putFloat(LiftMeUpConstants.PREF_LNG_KEY, (float) location.getLongitude());
+			editor.apply();
+		}
+		locationManager.requestLocationUpdates(provider, 5000, 5,
+				locationListener);
+	}
+
 	@Override
-	public void onDestroy(){
+	public void onDestroy() {
 		super.onDestroy();
 		mNM.cancel(NOTIFICATION);
 		sensorManager.unregisterListener(this);
 		Toast.makeText(this, "Fall Detecting Stoped", Toast.LENGTH_LONG).show();
 	}
-	
+
 	/** Initialization */
-	private void initializeWindow() {
+	private void initDetectWindow() {
 		curState = IDLE;
 		datacout = 0;
 		msgcout = 0;
@@ -315,7 +301,8 @@ public class FallDetectingService extends Service implements
 			if (AcceWindow[i] <= LOW_TH) {
 				isLowReached = true;
 				GravBeforeImpact = gravityValues;
-				Log.d("BeforeImpact", "x: "+ gravityValues[0] + " y: "+ gravityValues[1] + " z: "+ gravityValues[0]);
+				Log.d("BeforeImpact", "x: " + gravityValues[0] + " y: "
+						+ gravityValues[1] + " z: " + gravityValues[0]);
 
 			}
 			if (isLowReached && AcceWindow[i] >= HIGH_TH) {
@@ -339,11 +326,10 @@ public class FallDetectingService extends Service implements
 					&& GravWindow[i][2] == -1.0f) {
 				continue;
 			}
-			float _angle=computeOrientationChanged(i, i + 1) ;
-			if (_angle>= ANGLE_TH && _angle<= 180.0 - ANGLE_TH) {
+			float _angle = computeOrientationChanged(i, i + 1);
+			if (_angle >= ANGLE_TH && _angle <= 180.0 - ANGLE_TH) {
 				changed = true;
-				Log.d("ANGLE_BOOL", "YES "
-						+ _angle);
+				Log.d("ANGLE_BOOL", "YES " + _angle);
 				break;
 			}
 		}
@@ -370,6 +356,7 @@ public class FallDetectingService extends Service implements
 		Log.d(ANGLE_TAG, Float.toString(angleChanged));
 		return angleChanged;
 	}
+
 	/** compute orientation changed, if given tow vector */
 	private float computeOrientationChanged(float[] v1, float[] v2) {
 		float angleChanged = 0.0f;
@@ -393,20 +380,21 @@ public class FallDetectingService extends Service implements
 		boolean isStill = true;
 		for (int i = 0; i < WINDOW_SIZE - 1; i++) {
 			if (AcceWindow[i] < G - TH && AcceWindow[i + 1] > G + TH) {
-				Log.d("Still", AcceWindow[i]+" "+AcceWindow[i+1]);
+				Log.d("Still", AcceWindow[i] + " " + AcceWindow[i + 1]);
 				isStill = false;
 				break;
 			}
 		}
 		return isStill;
 	}
-	/** Check device if abs(Y) > 0.5 G position*/
+
+	/** Check device if abs(Y) > 0.5 G position */
 	private boolean checkVertical() {
 		boolean isV = false;
-		for (int i = 0; i < WINDOW_SIZE ; i++) {
-			if (GravWindow[i][1] > 0.5*G || GravWindow[i][1] < -0.5 * G) {
+		for (int i = 0; i < WINDOW_SIZE; i++) {
+			if (GravWindow[i][1] > 0.5 * G || GravWindow[i][1] < -0.5 * G) {
 				isV = true;
-				Log.d("V", "Y : "+GravWindow[i][1]);
+				Log.d("V", "Y : " + GravWindow[i][1]);
 				break;
 			}
 		}
@@ -436,134 +424,29 @@ public class FallDetectingService extends Service implements
 	/** check all states of fall */
 	private void checkFall() {
 		// check for primary fall pattern
-		if (checkFallPattern() /*&& checkOrientation()*/) {
+		if (checkFallPattern() /* && checkOrientation() */) {
 			primaryFall = true;
 			Log.d("primaryFall", "YES");
 		}
-		//check for long lie after fall
+		// check for long lie after fall
 		if (primaryFall && datacout > LONGLY_TH) {
 			boolean _still = checkStill();
 			if (_still && datacout > RESET_COUNT_TH) {
-					longLyFall = true;
-					Log.d("longLyFall", "YES");
+				longLyFall = true;
+				Log.d("longLyFall", "YES");
 			}
-			if ( !_still && checkVertical()) {
-				initializeWindow();
+			if (!_still && checkVertical()) {
+				initDetectWindow();
 				recoverFromPrimary = true;
 				curState = RECOVER;
 				Log.d("RecoverFall", "YES");
 			}
 		}
-		//if long lie and time out, confirm fall detection
+		// if long lie and time out, confirm fall detection
 		if (longLyFall && datacout > ALARM_TH) {
 			confirmFall = true;
 			Log.d("confirmFall", "YES");
 		}
-	}
-	
-	/** Helper method to create toasts. */
-	private void createToast ( String toastMessage ) {
-		// Use a 'final' local variable, otherwise the compiler will complain
-        final String toastMessageFinal = toastMessage;
-
-        // Post a runnable in the Main UI thread
-        handler.post ( new Runnable() {
-                @Override
-                public void run() {
-                    Toast.makeText ( getApplicationContext() , 
-                                     toastMessageFinal , 
-                                     Toast.LENGTH_SHORT ).show();
-                }
-        });
-	}
-	/**function to send help message*/
-	private void sendMessage(){
-		Thread clickThread = new Thread() {
-            public void run() {
-
-                try {
-                	// Construct the DTN message
-                    DtnMessage message = new DtnMessage();
-                    // Data part
-                    message.addData()                  // Create data chunk
-                        .writeString(Name)
-                        .writeString("fall")
-                        .writeDouble(currentLocationLat)
-                        .writeDouble(currentLocationLng);
-
-                    // Broadcast the message using the fwd layer interface
-                    fwdLayer.sendMessage ( descriptor , message , "everyone" , null );
-
-                    // Tell the user that the message has been sent
-                    createToast ( "Chat message broadcast!" + currentLocationLat + " " + currentLocationLng);
-                    //SmsManager smsManager = SmsManager.getDefault();
-    				//smsManager.sendTextMessage(PhoneNum, null, "I FALL at "+currentLocationLat+" "+currentLocationLng, null, null);
-                }
-                catch ( Exception e ) {
-                    // Log the exception
-                    Log.e ( "BroadcastApp" , "Exception while sending message" , e );
-                }
-            }
-        };
-        clickThread.start();
-
-        // Inform the user
-        createToast ( "Broadcasting message..." );
-	}
-	
-	/**helper function to start middleware*/
-	private void startMiddleWare(){
-		try 
-		{
-
-			// Start the middleware
-			middleware = new DtnMiddlewareProxy ( getApplicationContext() );
-			middleware.start ( new MiddlewareListener() {
-            public void onMiddlewareEvent ( MiddlewareEvent event ) {
-                try {
-
-                    // Check if the middleware failed to start
-                    if ( event.getEventType() != MiddlewareEvent.MIDDLEWARE_STARTED ) {
-                        throw new Exception( "Middleware failed to start, is it installed?" );
-                    }
-
-                    // Get the fwd layer API
-                    fwdLayer = new ForwardingLayerProxy ( middleware );
-
-                    // Get a descriptor for this user
-                    // Typically, the user enters the username, but here we simply use IMEI number
-                    descriptor = fwdLayer.getDescriptor ( "cs4222.falldetector" , "client" );
-
-                    // Set the broadcast address
-                    fwdLayer.setBroadcastAddress ( "cs4222.falldetector" , "everyone" );
-                }
-                catch ( Exception e ) {
-                    // Log the exception
-                    Log.e ( "LIFT-ME-UP" , "Exception in middleware start listener" , e );
-                }
-            }
-        } );
-		}
-		catch ( Exception e ) {
-		    // Log the exception
-		    Log.e ( "LIFT-ME-UP" , "Exception in onCreate()" , e );
-		    // Inform the user
-		    createToast ( "Exception in onCreate(), check log" );
-		}
-	}
-	/**helper function close middleware*/
-	private void stopMiddleWare(){
-		try {
-            // Stop the middleware
-            // Note: This automatically stops the API proxies, and releases descriptors/listeners
-            middleware.stop();
-        }
-        catch ( Exception e ) {
-            // Log the exception
-            Log.e ( "BroadcastApp" , "Exception on stopping middleware" , e );
-            // Inform the user
-            createToast ( "Exception while stopping middleware, check log" );
-        }
 	}
 
 }

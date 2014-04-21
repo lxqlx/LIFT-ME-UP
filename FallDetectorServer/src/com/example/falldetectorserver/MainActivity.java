@@ -12,10 +12,13 @@ import nus.dtn.util.DtnMessage;
 import android.app.Activity;
 import android.app.Notification;
 import android.app.NotificationManager;
+import android.content.Intent;
 import android.os.Bundle;
 import android.os.Handler;
+import android.support.v4.app.NotificationCompat;
 import android.util.Log;
 import android.view.Menu;
+import android.view.MenuItem;
 import android.widget.TabHost;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -30,6 +33,18 @@ public class MainActivity extends Activity {
 	private TextView tv;
 	private GoogleMap map;
 	private LatLng fall_Location;
+	
+    /** DTN Middleware API. */
+    private DtnMiddlewareInterface middleware;
+    /** Fwd layer API. */
+    private ForwardingLayerInterface fwdLayer;
+
+    /** Sender's descriptor. */
+    private Descriptor descriptor;
+    
+    /** Handler to the main thread to do UI stuff. */
+    private Handler handler;
+    
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
@@ -141,19 +156,18 @@ public class MainActivity extends Activity {
                         map.addMarker(new MarkerOptions().position(fall_Location).title(name));
                         map.moveCamera(CameraUpdateFactory.newLatLngZoom(fall_Location, 15));
                     	tv.setText(receivedText);
-                    	@SuppressWarnings("deprecation")
-						Notification n  = new Notification.Builder(getApplicationContext())
+
+						Notification n  = new NotificationCompat.Builder(getApplicationContext())
                     	        .setContentTitle("AlERT")
                     	        .setContentText("Fall detected from " + name)
                     	        .setSmallIcon(R.drawable.ic_launcher)
-                    	        .setAutoCancel(true).getNotification();
+                    	        .setAutoCancel(true).build();
                     	    
                     	n.defaults = Notification.DEFAULT_ALL;
                     	NotificationManager notificationManager = 
                     	  (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
 
-                    	notificationManager.notify(0, n); 
-                        
+                    	notificationManager.notify(0, n);
                     }
                 } );
                 
@@ -185,22 +199,22 @@ public class MainActivity extends Activity {
                 }
             } );
     }
-    
-    /** DTN Middleware API. */
-    private DtnMiddlewareInterface middleware;
-    /** Fwd layer API. */
-    private ForwardingLayerInterface fwdLayer;
-
-    /** Sender's descriptor. */
-    private Descriptor descriptor;
-    
-    /** Handler to the main thread to do UI stuff. */
-    private Handler handler;
 
 	@Override
 	public boolean onCreateOptionsMenu(Menu menu) {
 		// Inflate the menu; this adds items to the action bar if it is present.
 		getMenuInflater().inflate(R.menu.main, menu);
 		return true;
+	}
+	
+	@Override
+	public boolean onOptionsItemSelected(MenuItem item) {
+		switch (item.getItemId()) {
+		    case R.id.action_register:
+		    startActivity(new Intent(this, GcmRegistrationActivity.class));
+		    return true;
+		    default:
+		    return super.onOptionsItemSelected(item);
+		}
 	}
 }

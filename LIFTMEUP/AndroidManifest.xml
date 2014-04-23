@@ -36,6 +36,8 @@
 
         <service android:name="nus.cs4222.service.FallDetectingService">
         </service>
+        <service android:name="nus.cs4222.service.LocationServiceHelper">
+        </service>
     </application>
 
 </manifest>

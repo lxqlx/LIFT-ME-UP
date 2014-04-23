@@ -74,7 +74,6 @@ public class FallDetectingService extends Service implements
 
 	private DtnHelper mDtnHelper;
 	private GcmHelper mGcmHelper;
-	private LocationServiceHelper mLocationHelper;
 	
 	@Override
 	public void onCreate() {
@@ -193,7 +192,7 @@ public class FallDetectingService extends Service implements
 		mDtnHelper = new DtnHelper(getApplicationContext());
 		mDtnHelper.startMiddleWare();
 		mGcmHelper = new GcmHelper(getApplicationContext());
-		mLocationHelper = new LocationServiceHelper(getApplicationContext());
+		
 		vibrator = (Vibrator) this.getSystemService(Context.VIBRATOR_SERVICE);
 		
 		return START_STICKY;
@@ -226,7 +225,7 @@ public class FallDetectingService extends Service implements
 		super.onDestroy();
 		mNM.cancel(NOTIFICATION);
 		sensorManager.unregisterListener(this);
-		mLocationHelper.removeLocationService();
+		stopLocationService();
 		mDtnHelper.stopMiddleWare();
 		Toast.makeText(this, "Fall Detecting Stoped", Toast.LENGTH_LONG).show();
 	}
@@ -385,10 +384,10 @@ public class FallDetectingService extends Service implements
 	/** check all states of fall */
 	private void checkFall() {
 		// check for primary fall pattern
-		if (checkFallPattern() /* && checkOrientation() */) {
+		if (!primaryFall && checkFallPattern() /* && checkOrientation() */) {
 			primaryFall = true;
 			//Log.d("primaryFall", "YES");
-			mLocationHelper.initLocationService();
+			startLocationService();
 		}
 		// check for long lie after fall
 		if (primaryFall && datacout > LONGLY_TH) {
@@ -402,7 +401,7 @@ public class FallDetectingService extends Service implements
 				recoverFromPrimary = true;
 				curState = RECOVER;
 				//Log.d("RecoverFall", "YES");
-				mLocationHelper.removeLocationService();
+				stopLocationService();
 			}
 		}
 		// if long lie and time out, confirm fall detection
@@ -410,6 +409,16 @@ public class FallDetectingService extends Service implements
 			confirmFall = true;
 			//Log.d("confirmFall", "YES");
 		}
+	}
+
+	private void startLocationService() {
+		Intent intent = new Intent(this, LocationServiceHelper.class);
+		startService(intent);
+	}
+
+	private void stopLocationService() {
+		Intent intent = new Intent(this, LocationServiceHelper.class);
+		stopService(intent);
 	}
 
 }

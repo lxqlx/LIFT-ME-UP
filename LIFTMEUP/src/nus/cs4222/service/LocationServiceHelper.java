@@ -1,30 +1,49 @@
 package nus.cs4222.service;
 
 import nus.cs4222.liftmeup.LiftMeUpConstants;
+import android.app.Service;
 import android.content.Context;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.SharedPreferences.Editor;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.Bundle;
+import android.os.IBinder;
 
-public class LocationServiceHelper {
-	private Context mContext;
+public class LocationServiceHelper extends Service {
+	
 	private LocationListener mGpsLocationListener;
 	private LocationListener mNetworkLocationListener;
 	private Location mCurrentBestLocation;
 	private static final int TWO_MINUTES = 1000 * 60 * 2;
-
-	public LocationServiceHelper(Context context) {
-		mContext = context;
+	
+	private static boolean IsRunning = false;
+	
+	@Override
+	public int onStartCommand(Intent intent , int flag, int startId) {
+		
+		if (!IsRunning) {
+			initLocationService();
+			IsRunning = true;
+		}
+		
+		return START_STICKY;
+	}
+	
+	@Override
+	public void onDestroy() {
+		super.onDestroy();
+		removeLocationService();
+		IsRunning = false;
 	}
 
-	public void initLocationService() {
+	private void initLocationService() {
 		mGpsLocationListener = new LocationListener() {
 			public void onLocationChanged(Location location) {
 				if (isBetterLocation(location, mCurrentBestLocation)) {
-					SharedPreferences pref = mContext.getSharedPreferences(
+					SharedPreferences pref = getSharedPreferences(
 							LiftMeUpConstants.PREF_NAME, Context.MODE_PRIVATE);
 					Editor editor = pref.edit();
 					editor.putFloat(LiftMeUpConstants.PREF_LAT_KEY,
@@ -49,7 +68,7 @@ public class LocationServiceHelper {
 		mNetworkLocationListener = new LocationListener() {
 			public void onLocationChanged(Location location) {
 				if (isBetterLocation(location, mCurrentBestLocation)) {
-					SharedPreferences pref = mContext.getSharedPreferences(
+					SharedPreferences pref = getSharedPreferences(
 							LiftMeUpConstants.PREF_NAME, Context.MODE_PRIVATE);
 					Editor editor = pref.edit();
 					editor.putFloat(LiftMeUpConstants.PREF_LAT_KEY,
@@ -71,8 +90,7 @@ public class LocationServiceHelper {
 			}
 		};
 
-		LocationManager locationManager = (LocationManager) mContext
-				.getSystemService(Context.LOCATION_SERVICE);
+		LocationManager locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
 
 		String networkProvider = LocationManager.NETWORK_PROVIDER;
 		String gpsProvider = LocationManager.GPS_PROVIDER;
@@ -87,7 +105,7 @@ public class LocationServiceHelper {
 		}
 
 		if (mCurrentBestLocation != null) {
-			SharedPreferences pref = mContext.getSharedPreferences(
+			SharedPreferences pref = getSharedPreferences(
 					LiftMeUpConstants.PREF_NAME, Context.MODE_PRIVATE);
 			Editor editor = pref.edit();
 			editor.putFloat(LiftMeUpConstants.PREF_LAT_KEY,
@@ -108,9 +126,8 @@ public class LocationServiceHelper {
 		}
 	}
 
-	public void removeLocationService() {
-		LocationManager locationManager = (LocationManager) mContext
-				.getSystemService(Context.LOCATION_SERVICE);
+	private void removeLocationService() {
+		LocationManager locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
 		if (mNetworkLocationListener != null) {
 			locationManager.removeUpdates(mNetworkLocationListener);
 		}
@@ -183,5 +200,11 @@ public class LocationServiceHelper {
 			return provider2 == null;
 		}
 		return provider1.equals(provider2);
+	}
+
+	@Override
+	public IBinder onBind(Intent arg0) {
+		// TODO Auto-generated method stub
+		return null;
 	}
 }

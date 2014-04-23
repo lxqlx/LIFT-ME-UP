@@ -1,6 +1,5 @@
 package nus.cs4222.service;
 
-import nus.cs4222.liftmeup.LiftMeUpConstants;
 import nus.cs4222.liftmeup.MainActivity;
 import nus.cs4222.liftmeup.R;
 import android.app.AlertDialog;
@@ -11,17 +10,10 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.DialogInterface.OnClickListener;
 import android.content.Intent;
-import android.content.SharedPreferences;
-import android.content.SharedPreferences.Editor;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
-import android.location.Criteria;
-import android.location.Location;
-import android.location.LocationListener;
-import android.location.LocationManager;
-import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Vibrator;
@@ -82,6 +74,7 @@ public class FallDetectingService extends Service implements
 
 	private DtnHelper mDtnHelper;
 	private GcmHelper mGcmHelper;
+	private LocationServiceHelper mLocationHelper;
 	
 	@Override
 	public void onCreate() {
@@ -131,7 +124,7 @@ public class FallDetectingService extends Service implements
 			AccelerationMag = (float) Math.sqrt(va[0] * va[0] + va[1] * va[1]
 					+ va[2] * va[2]);
 			addAcceData(AccelerationMag);
-			Log.d("Acce", AccelerationMag + " ");
+			//Log.d("Acce", AccelerationMag + " ");
 		}
 
 		// important to trigger fall flag
@@ -196,11 +189,13 @@ public class FallDetectingService extends Service implements
 	public int onStartCommand(Intent intent, int flag, int startId) {
 		initDetectWindow();
 		initSensors();
-		initLocationService();
+		
 		mDtnHelper = new DtnHelper(getApplicationContext());
+		mDtnHelper.startMiddleWare();
 		mGcmHelper = new GcmHelper(getApplicationContext());
+		mLocationHelper = new LocationServiceHelper(getApplicationContext());
 		vibrator = (Vibrator) this.getSystemService(Context.VIBRATOR_SERVICE);
-
+		
 		return START_STICKY;
 	}
 
@@ -226,47 +221,13 @@ public class FallDetectingService extends Service implements
 				20000); // Measurement interval (microsec)
 	}
 
-	private void initLocationService() {
-		LocationManager locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
-		LocationListener locationListener = new LocationListener() {
-			public void onLocationChanged(Location location) {
-				SharedPreferences pref = getSharedPreferences(LiftMeUpConstants.PREF_NAME, MODE_PRIVATE);
-				Editor editor = pref.edit();
-				editor.putFloat(LiftMeUpConstants.PREF_LAT_KEY, (float) location.getLatitude());
-				editor.putFloat(LiftMeUpConstants.PREF_LNG_KEY, (float) location.getLongitude());
-				editor.apply();
-			}
-
-			public void onStatusChanged(String provider, int status,
-					Bundle extras) {
-			}
-
-			public void onProviderEnabled(String provider) {
-			}
-
-			public void onProviderDisabled(String provider) {
-			}
-		};
-		
-		Criteria criteria = new Criteria();
-		String provider = locationManager.getBestProvider(criteria, true);
-		Location location = locationManager.getLastKnownLocation(provider);
-		if (location != null) {
-			SharedPreferences pref = getSharedPreferences(LiftMeUpConstants.PREF_NAME, MODE_PRIVATE);
-			Editor editor = pref.edit();
-			editor.putFloat(LiftMeUpConstants.PREF_LAT_KEY, (float) location.getLatitude());
-			editor.putFloat(LiftMeUpConstants.PREF_LNG_KEY, (float) location.getLongitude());
-			editor.apply();
-		}
-		locationManager.requestLocationUpdates(provider, 5000, 5,
-				locationListener);
-	}
-
 	@Override
 	public void onDestroy() {
 		super.onDestroy();
 		mNM.cancel(NOTIFICATION);
 		sensorManager.unregisterListener(this);
+		mLocationHelper.removeLocationService();
+		mDtnHelper.stopMiddleWare();
 		Toast.makeText(this, "Fall Detecting Stoped", Toast.LENGTH_LONG).show();
 	}
 
@@ -301,8 +262,8 @@ public class FallDetectingService extends Service implements
 			if (AcceWindow[i] <= LOW_TH) {
 				isLowReached = true;
 				GravBeforeImpact = gravityValues;
-				Log.d("BeforeImpact", "x: " + gravityValues[0] + " y: "
-						+ gravityValues[1] + " z: " + gravityValues[0]);
+				//Log.d("BeforeImpact", "x: " + gravityValues[0] + " y: "
+				//		+ gravityValues[1] + " z: " + gravityValues[0]);
 
 			}
 			if (isLowReached && AcceWindow[i] >= HIGH_TH) {
@@ -310,7 +271,7 @@ public class FallDetectingService extends Service implements
 			}
 			if (isLowReached && isHighReached) {
 				isFall = true;
-				Log.d("FallPattern", "YES " + AcceWindow[i]);
+				//Log.d("FallPattern", "YES " + AcceWindow[i]);
 				break;
 			}
 		}
@@ -380,7 +341,7 @@ public class FallDetectingService extends Service implements
 		boolean isStill = true;
 		for (int i = 0; i < WINDOW_SIZE - 1; i++) {
 			if (AcceWindow[i] < G - TH && AcceWindow[i + 1] > G + TH) {
-				Log.d("Still", AcceWindow[i] + " " + AcceWindow[i + 1]);
+				//Log.d("Still", AcceWindow[i] + " " + AcceWindow[i + 1]);
 				isStill = false;
 				break;
 			}
@@ -394,7 +355,7 @@ public class FallDetectingService extends Service implements
 		for (int i = 0; i < WINDOW_SIZE; i++) {
 			if (GravWindow[i][1] > 0.5 * G || GravWindow[i][1] < -0.5 * G) {
 				isV = true;
-				Log.d("V", "Y : " + GravWindow[i][1]);
+				//Log.d("V", "Y : " + GravWindow[i][1]);
 				break;
 			}
 		}
@@ -426,26 +387,28 @@ public class FallDetectingService extends Service implements
 		// check for primary fall pattern
 		if (checkFallPattern() /* && checkOrientation() */) {
 			primaryFall = true;
-			Log.d("primaryFall", "YES");
+			//Log.d("primaryFall", "YES");
+			mLocationHelper.initLocationService();
 		}
 		// check for long lie after fall
 		if (primaryFall && datacout > LONGLY_TH) {
 			boolean _still = checkStill();
 			if (_still && datacout > RESET_COUNT_TH) {
 				longLyFall = true;
-				Log.d("longLyFall", "YES");
+				//Log.d("longLyFall", "YES");
 			}
 			if (!_still && checkVertical()) {
 				initDetectWindow();
 				recoverFromPrimary = true;
 				curState = RECOVER;
-				Log.d("RecoverFall", "YES");
+				//Log.d("RecoverFall", "YES");
+				mLocationHelper.removeLocationService();
 			}
 		}
 		// if long lie and time out, confirm fall detection
 		if (longLyFall && datacout > ALARM_TH) {
 			confirmFall = true;
-			Log.d("confirmFall", "YES");
+			//Log.d("confirmFall", "YES");
 		}
 	}
 

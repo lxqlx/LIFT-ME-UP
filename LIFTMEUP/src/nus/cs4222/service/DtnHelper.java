@@ -35,7 +35,7 @@ public class DtnHelper {
 				SharedPreferences pref = mContext.getSharedPreferences(LiftMeUpConstants.PREF_NAME, Context.MODE_PRIVATE);
 				String name = pref.getString(LiftMeUpConstants.PREF_OWNER_NAME_KEY, "");
 				Float lat = pref.getFloat(LiftMeUpConstants.PREF_LAT_KEY, 0);
-				Float lng = pref.getFloat(LiftMeUpConstants.PREF_LAT_KEY, 0);
+				Float lng = pref.getFloat(LiftMeUpConstants.PREF_LNG_KEY, 0);
 				
 				try {
 					// Construct the DTN message
@@ -72,7 +72,7 @@ public class DtnHelper {
 							throw new Exception(
 									"Middleware failed to start, is it installed?");
 						}
-
+						
 						// Get the fwd layer API
 						fwdLayer = new ForwardingLayerProxy(middleware);
 

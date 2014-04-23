@@ -21,7 +21,7 @@ public class GcmHelper {
 		String name = pref.getString(LiftMeUpConstants.PREF_OWNER_NAME_KEY, "");
 		String num = pref.getString(LiftMeUpConstants.PREF_CAREGIVER_CONTACT_KEY, "");
 		Float lat = pref.getFloat(LiftMeUpConstants.PREF_LAT_KEY, 0);
-		Float lng = pref.getFloat(LiftMeUpConstants.PREF_LAT_KEY, 0);
+		Float lng = pref.getFloat(LiftMeUpConstants.PREF_LNG_KEY, 0);
 		
 		final String url = "http://cs4222-lift-me-up.appspot.com/send?phone_number=" + num + 
 				"&latitude=" + lat + "&longitude=" + lng + "&name=" + name;

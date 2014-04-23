@@ -1,6 +1,7 @@
 package com.example.falldetectorserver;
 
 import android.app.IntentService;
+import android.app.Notification;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.Context;
@@ -39,11 +40,10 @@ public class GcmIntentService extends IntentService {
 			 */
 			if (GoogleCloudMessaging.MESSAGE_TYPE_SEND_ERROR
 					.equals(messageType)) {
-				sendNotification("Send error: " + extras.toString());
+				//sendNotification("Send error: " + extras.toString());
 			} else if (GoogleCloudMessaging.MESSAGE_TYPE_DELETED
 					.equals(messageType)) {
-				sendNotification("Deleted messages on server: "
-						+ extras.toString());
+				//sendNotification("Deleted messages on server: "+ extras.toString());
 				// If it's a regular GCM message
 			} else if (GoogleCloudMessaging.MESSAGE_TYPE_MESSAGE
 					.equals(messageType)) {
@@ -51,7 +51,7 @@ public class GcmIntentService extends IntentService {
 				double lat = Double.parseDouble(extras.getString("latitude", "0"));
 				double lng = Double.parseDouble(extras.getString("longitude", "0"));
 				// Post notification of received message.
-				sendNotification("Fall detected from " + "name: " + name + " lat: " + lat + " lng: " + lng);
+				sendNotification("Fall detected from " + "name: " + name + " lat: " + lat + " lng: " + lng,lat,lng);
 				Log.i(TAG, "Received: " + "lat: " + lat + " lng: " + lng);
 			}
 		}
@@ -60,20 +60,25 @@ public class GcmIntentService extends IntentService {
 	}
 
 	// Put the message into a notification and post it.
-	private void sendNotification(String msg) {
+	private void sendNotification(String msg,double lat,double lng) {
 		mNotificationManager = (NotificationManager) this
 				.getSystemService(Context.NOTIFICATION_SERVICE);
-
-		PendingIntent contentIntent = PendingIntent.getActivity(this, 0,
-				new Intent(this, MainActivity.class), 0);
+		Intent intent = new Intent(this,MainActivity.class);
+		intent.putExtra("lat", lat);
+		intent.putExtra("lng", lng);
+		intent.setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP);
+		PendingIntent contentIntent = PendingIntent.getActivity(this, 0,intent, PendingIntent.FLAG_UPDATE_CURRENT);
 
 		NotificationCompat.Builder mBuilder = new NotificationCompat.Builder(
 				this).setSmallIcon(R.drawable.ic_launcher)
 				.setContentTitle("Fall detected!")
 				.setStyle(new NotificationCompat.BigTextStyle().bigText(msg))
-				.setContentText(msg);
+				.setContentText(msg)
+				.setAutoCancel(true);
 
 		mBuilder.setContentIntent(contentIntent);
-		mNotificationManager.notify(NOTIFICATION_ID, mBuilder.build());
+		Notification n = mBuilder.build();
+		n.defaults = Notification.DEFAULT_ALL;
+		mNotificationManager.notify(NOTIFICATION_ID, n);
 	}
 }
